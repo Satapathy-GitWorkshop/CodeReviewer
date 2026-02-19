@@ -1,0 +1,217 @@
+============================================================
+   CodeReview AI Dashboard - Setup & Run Guide
+============================================================
+
+------------------------------------------------------------
+PREREQUISITES - Install These First
+------------------------------------------------------------
+
+1. Java 17
+   Mac:     brew install openjdk@17
+   Windows: winget install Microsoft.OpenJDK.17
+   Ubuntu:  sudo apt install openjdk-17-jdk
+   Check:   java -version
+
+2. Maven
+   Mac:     brew install maven
+   Windows: winget install Apache.Maven
+   Ubuntu:  sudo apt install maven
+   Check:   mvn -version
+
+3. Node.js 18+
+   Mac:     brew install node
+   Windows: winget install OpenJS.NodeJS
+   Ubuntu:  curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+            sudo apt install nodejs
+   Check:   node -version
+
+4. Docker Desktop
+   Download: https://www.docker.com/products/docker-desktop
+   Install and keep it RUNNING in background
+   Check:   docker -version
+
+------------------------------------------------------------
+GET FREE API KEYS
+------------------------------------------------------------
+
+GitHub Token (raises rate limit from 60 to 5000 req/hr)
+  1. Go to https://github.com/settings/tokens
+  2. Click "Generate new token (classic)"
+  3. Give it a name e.g. codereview-dashboard
+  4. Check "public_repo" scope (or "repo" for private repos)
+  5. Click Generate and COPY the token
+
+Groq API Key (free AI-powered code reviews)
+  1. Go to https://console.groq.com
+  2. Sign up for free
+  3. Go to API Keys > Create API Key
+  4. COPY the key
+
+NOTE: Both keys are optional. App works without them
+      but with limited functionality.
+
+------------------------------------------------------------
+PROJECT SETUP
+------------------------------------------------------------
+
+Step 1: Extract the project
+   unzip code-review-dashboard.zip
+   cd code-review-dashboard
+
+Step 2: Configure environment
+   cp .env.example .env
+   (Open .env in any text editor and fill in your keys)
+
+   GITHUB_TOKEN=ghp_your_token_here
+   GROQ_API_KEY=gsk_your_key_here
+   DB_USERNAME=crduser
+   DB_PASSWORD=crdpass
+
+   Save the file.
+
+------------------------------------------------------------
+OPTION A: RUN WITH DOCKER (Recommended - One Command)
+------------------------------------------------------------
+
+Start everything:
+   ./start.sh
+   (Windows: docker-compose up -d --build)
+
+This starts 3 containers automatically:
+   PostgreSQL  (database)  --> port 5432
+   Spring Boot (backend)   --> port 8080
+   React/Nginx (frontend)  --> port 3000
+
+Open browser: http://localhost:3000
+
+Verify all running:
+   docker-compose ps
+   (All 3 should show status "Up")
+
+Test backend:
+   curl http://localhost:8080/api/health
+   (Should return: {"status":"UP"})
+
+------------------------------------------------------------
+OPTION B: RUN SEPARATELY (For Development)
+------------------------------------------------------------
+
+Before starting - create frontend/.env file:
+   echo "REACT_APP_API_URL=http://localhost:8080/api" > frontend/.env
+
+Terminal 1 - Start Database only (via Docker):
+   docker-compose up -d db
+
+   OR skip and use built-in H2 database (no Docker needed)
+   H2 data resets on every restart.
+
+Terminal 2 - Start Backend:
+   cd backend
+
+   Mac/Linux:
+     export GITHUB_TOKEN=your_token
+     export GROQ_API_KEY=your_key
+     mvn spring-boot:run
+
+   Windows (PowerShell):
+     $env:GITHUB_TOKEN="your_token"
+     $env:GROQ_API_KEY="your_key"
+     mvn spring-boot:run
+
+   Backend runs at: http://localhost:8080
+
+Terminal 3 - Start Frontend:
+   cd frontend
+   npm install        (first time only)
+   npm start
+
+   Frontend runs at: http://localhost:3000
+
+------------------------------------------------------------
+USING THE DASHBOARD
+------------------------------------------------------------
+
+1. Open http://localhost:3000
+2. Click "+ Add Repo" (top right)
+3. Enter a GitHub repository:
+      Owner: facebook
+      Name:  react
+4. Click Add
+5. Select the repo in the left sidebar
+6. Click "Run Analysis" button
+7. Wait 30-60 seconds
+8. You will see commits, risk scores and AI reviews
+
+------------------------------------------------------------
+USEFUL DOCKER COMMANDS
+------------------------------------------------------------
+
+Start all containers:
+   docker-compose up -d
+
+Stop all containers:
+   docker-compose down
+
+View live logs:
+   docker-compose logs -f
+
+View logs for one service:
+   docker-compose logs -f backend
+   docker-compose logs -f frontend
+
+Restart one service:
+   docker-compose restart backend
+
+Rebuild after code changes:
+   docker-compose up -d --build
+
+Reset everything (wipes database):
+   docker-compose down -v
+   docker-compose up -d --build
+
+------------------------------------------------------------
+TROUBLESHOOTING
+------------------------------------------------------------
+
+Docker not starting?
+   Make sure Docker Desktop app is open and running
+
+Port already in use?
+   Edit docker-compose.yml and change the port
+   e.g. change "3000:80" to "3001:80"
+
+Backend not starting?
+   docker-compose logs backend
+
+No commits showing after analysis?
+   Check your GITHUB_TOKEN is correct in .env
+   Then run: docker-compose restart backend
+
+Frontend not connecting to backend (separate mode)?
+   Make sure frontend/.env has:
+   REACT_APP_API_URL=http://localhost:8080/api
+
+Want to reset database only?
+   docker-compose down -v
+   docker-compose up -d
+
+------------------------------------------------------------
+URLS QUICK REFERENCE
+------------------------------------------------------------
+
+Dashboard:    http://localhost:3000
+Backend API:  http://localhost:8080/api
+Health Check: http://localhost:8080/api/health
+H2 Console:   http://localhost:8080/h2-console  (dev only)
+
+------------------------------------------------------------
+DEPLOYMENT (Free Hosting)
+------------------------------------------------------------
+
+Backend  --> Render.com  (free tier, 750 hrs/month)
+Frontend --> Vercel.com  (free tier, unlimited)
+Database --> Render PostgreSQL (free, 1GB)
+
+See README.md for full deployment steps.
+
+============================================================
